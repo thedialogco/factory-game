@@ -1,0 +1,1692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Factory</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Comic Sans MS', 'Chalkboard SE', cursive;
+  background: #1a1a2e;
+  overflow: hidden;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Header ── */
+#header {
+  background: #16213e;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 3px solid #0f3460;
+  flex-shrink: 0;
+}
+
+#header h1 {
+  color: #e94560;
+  font-size: 26px;
+  letter-spacing: 2px;
+}
+
+#money-display {
+  color: #4ecca3;
+  font-size: 22px;
+  font-weight: bold;
+}
+
+#buy-btn {
+  background: #e94560;
+  color: white;
+  border: none;
+  padding: 10px 22px;
+  border-radius: 10px;
+  font-size: 16px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: none;
+}
+#buy-btn:hover:not(:disabled) { background: #c73652; transform: scale(1.06); }
+#buy-btn:disabled { background: #555; cursor: not-allowed; opacity: 0.6; }
+
+#pet-count-display {
+  color: #aaa;
+  font-size: 15px;
+}
+
+/* ── Canvas ── */
+#game-canvas {
+  flex: 1;
+  display: block;
+  width: 100%;
+}
+
+/* ── Modal overlay ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal {
+  background: #16213e;
+  border: 3px solid #0f3460;
+  border-radius: 18px;
+  padding: 36px 40px;
+  max-width: 520px;
+  width: 92%;
+  text-align: center;
+  color: white;
+  box-shadow: 0 0 40px rgba(0,0,0,0.6);
+}
+
+.modal h2 {
+  color: #4ecca3;
+  font-size: 24px;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+.modal .subtitle {
+  color: #aaa;
+  font-size: 14px;
+  margin-bottom: 18px;
+}
+
+/* Progress dots */
+.progress-dots {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin: 12px 0 20px;
+}
+.dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #2a3a5e;
+  border: 2px solid #0f3460;
+  transition: background 0.3s, border-color 0.3s;
+}
+.dot.filled { background: #4ecca3; border-color: #4ecca3; }
+
+/* Question */
+.question-text {
+  font-size: 42px;
+  color: #e94560;
+  margin: 10px 0 18px;
+  letter-spacing: 2px;
+}
+
+/* Feedback */
+.feedback {
+  font-size: 17px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  margin: 8px 0;
+  min-height: 36px;
+}
+.feedback.correct { background: #0d3d1a; color: #4ecca3; }
+.feedback.wrong   { background: #3d0d0d; color: #e94560; }
+
+/* Answer input */
+.answer-input {
+  font-size: 28px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: 2px solid #0f3460;
+  background: #0f2040;
+  color: white;
+  width: 130px;
+  text-align: center;
+  font-family: inherit;
+  margin: 10px 0;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.answer-input:focus { border-color: #4ecca3; }
+
+/* Primary button */
+.btn-primary {
+  background: #4ecca3;
+  color: #1a1a2e;
+  border: none;
+  padding: 12px 32px;
+  border-radius: 10px;
+  font-size: 20px;
+  font-family: inherit;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 14px;
+  transition: all 0.15s;
+  display: inline-block;
+}
+.btn-primary:hover { background: #3ab89a; transform: scale(1.05); }
+
+/* Pet options */
+.pet-options {
+  display: flex;
+  gap: 18px;
+  justify-content: center;
+  margin: 20px 0 10px;
+  flex-wrap: wrap;
+}
+.pet-option {
+  background: #0f3460;
+  border: 3px solid #1a4a7a;
+  border-radius: 14px;
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 56px;
+  line-height: 1;
+  user-select: none;
+}
+.pet-option:hover {
+  border-color: #4ecca3;
+  transform: scale(1.12) translateY(-4px);
+  background: #1a4a80;
+  box-shadow: 0 8px 20px rgba(78, 204, 163, 0.3);
+}
+
+/* Result modal */
+.result-icon { font-size: 64px; margin-bottom: 10px; }
+.result-title { color: #4ecca3; font-size: 26px; margin-bottom: 8px; }
+.result-msg { color: #aaa; font-size: 16px; margin-bottom: 20px; line-height: 1.5; }
+
+/* Mute button */
+#mute-btn {
+  background: none;
+  border: 2px solid #4ecca3;
+  color: #4ecca3;
+  padding: 5px 11px;
+  border-radius: 8px;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1;
+}
+#mute-btn:hover { background: rgba(78,204,163,0.18); }
+
+/* Predator alert modal */
+#predator-modal .modal { border-color: #e94560; box-shadow: 0 0 50px rgba(233,69,96,0.4); }
+.pred-icon { font-size: 76px; margin-bottom: 4px; animation: dangerPulse 0.35s infinite alternate; display: block; }
+.pred-header { color: #e94560; font-size: 21px; font-weight: bold; margin-bottom: 4px; }
+.timer-wrap { background: #2a0808; border-radius: 8px; height: 18px; margin: 10px 0 4px; overflow: hidden; }
+.timer-bar { height: 100%; border-radius: 8px; background: linear-gradient(90deg, #e94560, #ff7090); transition: width 0.12s linear; }
+.timer-num { font-size: 38px; font-weight: bold; color: #e94560; margin: 2px 0 10px; }
+.btn-danger {
+  background: #e94560; color: white; border: none;
+  padding: 12px 32px; border-radius: 10px; font-size: 20px;
+  font-family: inherit; font-weight: bold; cursor: pointer;
+  margin-top: 14px; transition: all 0.15s; display: inline-block;
+}
+.btn-danger:hover { background: #c73652; transform: scale(1.05); }
+@keyframes dangerPulse { from { transform: scale(1); } to { transform: scale(1.1) rotate(-3deg); } }
+
+/* Pet info modal */
+#pet-info-modal .pet-info-emoji { font-size: 80px; margin-bottom: 6px; line-height: 1; }
+#pet-info-modal .rarity-badge {
+  display: inline-block;
+  padding: 4px 16px;
+  border-radius: 20px;
+  font-size: 15px;
+  font-weight: bold;
+  margin-bottom: 18px;
+  letter-spacing: 1px;
+}
+#pet-info-modal .stat-row {
+  background: #0f2040;
+  border-radius: 10px;
+  padding: 14px 20px;
+  margin: 8px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 17px;
+}
+#pet-info-modal .stat-label { color: #aaa; }
+#pet-info-modal .stat-value { color: #4ecca3; font-weight: bold; font-size: 20px; }
+#pet-info-modal .hint { color: #555; font-size: 13px; margin-top: 14px; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div id="header">
+  <h1>🏭 Factory</h1>
+  <div id="money-display">💰 $0.00</div>
+  <div id="pet-count-display"></div>
+  <button id="buy-btn">🐾 Buy Pet <span id="pet-cost-label"></span></button>
+  <button id="mute-btn" title="Toggle sound">🔊</button>
+</div>
+
+<!-- Game Canvas -->
+<canvas id="game-canvas"></canvas>
+
+<!-- Quiz Modal -->
+<div class="modal-overlay" id="quiz-modal">
+  <div class="modal">
+    <h2 id="quiz-title">Answer 2 Questions to Get Your First Pet!</h2>
+    <p class="subtitle" id="quiz-subtitle">Get both right and pick your first animal companion!</p>
+    <div class="progress-dots">
+      <div class="dot" id="dot-1"></div>
+      <div class="dot" id="dot-2"></div>
+    </div>
+    <div class="question-text" id="question-text">5 + 3 = ?</div>
+    <div class="feedback" id="feedback"></div>
+    <input class="answer-input" type="number" id="answer-input" placeholder="?" autocomplete="off">
+    <br>
+    <button class="btn-primary" id="submit-btn">Check ✓</button>
+  </div>
+</div>
+
+<!-- Pet Select Modal -->
+<div class="modal-overlay" id="pet-modal" style="display:none">
+  <div class="modal">
+    <h2>🎉 You Earned a Pet!</h2>
+    <p class="subtitle">Tap one of these three animals to add them to your factory:</p>
+    <div class="pet-options" id="pet-options"></div>
+  </div>
+</div>
+
+<!-- Pet Reveal Modal (shown right after picking a pet) -->
+<div class="modal-overlay" id="pet-reveal-modal" style="display:none">
+  <div class="modal">
+    <h2>Meet Your New Pet!</h2>
+    <div class="pet-info-emoji" id="pr-emoji"></div>
+    <div class="rarity-badge" id="pr-rarity"></div>
+    <div class="stat-row">
+      <span class="stat-label">Earning Rate</span>
+      <span class="stat-value" id="pr-rate"></span>
+    </div>
+    <p style="color:#aaa; font-size:14px; margin-top:14px;">
+      Click your pet anytime to check their stats!
+    </p>
+    <button class="btn-primary" id="pr-ok-btn" style="margin-top:18px;">Let's Go! 🎮</button>
+  </div>
+</div>
+
+<!-- Pet Info Modal -->
+<div class="modal-overlay" id="pet-info-modal" style="display:none">
+  <div class="modal">
+    <div class="pet-info-emoji" id="pi-emoji"></div>
+    <div class="rarity-badge" id="pi-rarity"></div>
+    <div class="stat-row">
+      <span class="stat-label">Earning Rate</span>
+      <span class="stat-value" id="pi-rate"></span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Total Earned</span>
+      <span class="stat-value" id="pi-total"></span>
+    </div>
+    <p class="hint">Click anywhere outside to close</p>
+  </div>
+</div>
+
+<!-- Predator Attack Modal -->
+<div class="modal-overlay" id="predator-modal" style="display:none">
+  <div class="modal">
+    <span class="pred-icon" id="pred-icon">🐺</span>
+    <div class="pred-header" id="pred-header">DANGER! The Wolf is Attacking!</div>
+    <p class="subtitle" id="pred-subtitle">Answer correctly to protect your animals!</p>
+    <div class="timer-wrap"><div class="timer-bar" id="pred-bar" style="width:100%"></div></div>
+    <div class="timer-num" id="pred-num">7</div>
+    <div class="question-text" id="pred-question"></div>
+    <div class="feedback" id="pred-feedback"></div>
+    <input class="answer-input" type="number" id="pred-answer" placeholder="?" autocomplete="off">
+    <br>
+    <button class="btn-danger" id="pred-submit">Defend! ⚔️</button>
+  </div>
+</div>
+
+<!-- Result Modal (success / failure) -->
+<div class="modal-overlay" id="result-modal" style="display:none">
+  <div class="modal">
+    <div class="result-icon" id="result-icon"></div>
+    <div class="result-title" id="result-title"></div>
+    <div class="result-msg" id="result-msg"></div>
+    <button class="btn-primary" id="result-ok-btn">OK</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// Configuration
+// ============================================================
+const WATER_ANIMALS = new Set(['🐬', '🐙']);
+
+const PET_EMOJIS = [
+  '🐱','🐶','🐸','🐰','🦊','🐻','🐼','🐨','🐯','🦁',
+  '🐮','🐷','🦆','🦋','🐢','🐙','🦄','🐺','🐭','🐹',
+  '🦝','🦔','🐿️','🦜','🐬','🦩','🐊','🦘','🦙','🐦',
+];
+
+const PET_R = 30;
+
+// ============================================================
+// State
+// ============================================================
+const S = {
+  phase: 'quiz',
+  pets: [],
+  totalMoney: 0,
+  petCost: 1,
+  questionsCorrect: 0,
+  currentQ: null,
+  isBuyQuiz: false,
+  pendingOptions: [],
+  lastTs: null,
+  amountSpent: 0,
+  // Predator system
+  predatorTimer: 30,
+  predatorActive: false,
+  predatorTimeLeft: 7,
+  predatorQ: null,
+  // Wolf run animation
+  wolfAnim: {
+    active: false, x: -80, y: 0, tx: 0, ty: 0,
+    phase: 'run-in', grabTimer: 0, victim: null,
+  },
+  // Shark animation
+  sharkAnim: {
+    active: false,
+    finX: 0, finY: 0,
+    edgeX: 0, edgeY: 0,
+    victim: null,
+    phase: 'swim-in',  // 'swim-in' | 'lunge' | 'drag' | 'sink'
+    phaseT: 0, phaseDur: 0,
+    startX: 0, startY: 0,
+  },
+  predatorType: 'wolf',
+  // Progress tracking
+  totalPetsAcquired: 0,
+  muted: false,
+};
+
+// ============================================================
+// Canvas & farm layout
+// ============================================================
+const canvas = document.getElementById('game-canvas');
+const ctx    = canvas.getContext('2d');
+let farmEl   = null;  // static farm decorations (rebuilt on resize)
+
+function getLake() {
+  return {
+    x: Math.floor(canvas.width  * 0.61),
+    y: Math.floor(canvas.height * 0.08),
+    w: Math.floor(canvas.width  * 0.35),
+    h: Math.floor(canvas.height * 0.84),
+    r: 56,
+  };
+}
+
+function inLake(px, py, lake, margin = 0) {
+  return px > lake.x - margin && px < lake.x + lake.w + margin &&
+         py > lake.y - margin && py < lake.y + lake.h + margin;
+}
+
+function buildFarmEl() {
+  const lake = getLake();
+  const flowers = [], trees = [], grass = [], lily = [];
+
+  for (let i = 0; i < 28; i++) {
+    let x, y, t = 0;
+    do { x = rand(18, canvas.width-18); y = rand(18, canvas.height-18); t++; }
+    while (t < 40 && inLake(x, y, lake, 30));
+    if (!inLake(x, y, lake, 10))
+      flowers.push({ x, y, e: ['🌸','🌼','🌺','🌻','🌾'][rand(0,4)] });
+  }
+
+  for (let i = 0; i < 9; i++) {
+    let x, y, t = 0;
+    do { x = rand(50, canvas.width * 0.56); y = rand(50, canvas.height-90); t++; }
+    while (t < 30 && inLake(x, y, lake, 55));
+    if (!inLake(x, y, lake, 40)) trees.push({ x, y });
+  }
+
+  for (let i = 0; i < 70; i++) {
+    const x = rand(0, canvas.width), y = rand(0, canvas.height);
+    if (!inLake(x, y, lake, 8))
+      grass.push({ x, y, rx: rand(14,44), ry: rand(7,18),
+                   a: Math.random()*Math.PI, alpha: 0.08+Math.random()*0.12,
+                   dark: Math.random()>0.5 });
+  }
+
+  for (let i = 0; i < 6; i++)
+    lily.push({ x: rand(lake.x+30, lake.x+lake.w-30),
+                y: rand(lake.y+30, lake.y+lake.h-30), r: rand(8,14) });
+
+  return { flowers, trees, grass, lily };
+}
+
+function resizeCanvas() {
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight - document.getElementById('header').offsetHeight;
+  farmEl = buildFarmEl();
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// ============================================================
+// Math question generator (3rd-grade level)
+// ============================================================
+function generateQuestion() {
+  const type = ['add','sub','mul'][Math.floor(Math.random() * 3)];
+  let a, b, answer, text;
+
+  if (type === 'add') {
+    a = rand(10, 60); b = rand(5, 40);
+    answer = a + b;
+    text = `${a} + ${b} = ?`;
+  } else if (type === 'sub') {
+    a = rand(20, 80); b = rand(1, a - 1);
+    answer = a - b;
+    text = `${a} − ${b} = ?`;
+  } else {
+    a = rand(2, 9); b = rand(2, 9);
+    answer = a * b;
+    text = `${a} × ${b} = ?`;
+  }
+  return { text, answer };
+}
+
+function rand(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+// ============================================================
+// Pet factory
+// ============================================================
+function createPet(emoji) {
+  const speed = rand(55, 90);
+  const angle = Math.random() * Math.PI * 2;
+  const lake  = getLake();
+  const water = WATER_ANIMALS.has(emoji);
+  let x, y;
+
+  if (water) {
+    x = rand(lake.x + 55, lake.x + lake.w - 55);
+    y = rand(lake.y + 55, lake.y + lake.h - 55);
+  } else {
+    let t = 0;
+    do {
+      x = rand(PET_R+10, canvas.width  - PET_R - 10);
+      y = rand(PET_R+10, canvas.height - PET_R - 10);
+      t++;
+    } while (t < 50 && inLake(x, y, lake, PET_R + 12));
+    if (inLake(x, y, lake, 0))
+      x = rand(PET_R+10, lake.x - PET_R - 20);
+  }
+
+  return {
+    emoji, x, y,
+    dx: Math.cos(angle) * speed,
+    dy: Math.sin(angle) * speed,
+    money: 0,
+    rate: rand(1, 100) / 100,
+    speed,
+    wanderTimer: rand(2, 5),
+  };
+}
+
+function petRarity(rate) {
+  if (rate >= 0.86) return { label: '⭐ LEGENDARY', bg: '#5a3a00', color: '#ffd700' };
+  if (rate >= 0.61) return { label: '🟠 EPIC',      bg: '#3a1a00', color: '#ff8c00' };
+  if (rate >= 0.31) return { label: '🟣 RARE',      bg: '#2a0a40', color: '#bf7fff' };
+  if (rate >= 0.11) return { label: '🔵 UNCOMMON',  bg: '#001a3a', color: '#60b0ff' };
+  return                     { label: '🟢 COMMON',   bg: '#0a2a0a', color: '#4ecca3' };
+}
+
+function randomPetOptions() {
+  const used = new Set(S.pets.map(p => p.emoji));
+  const pool = PET_EMOJIS.filter(e => !used.has(e));
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  return pool.slice(0, 3);
+}
+
+// ============================================================
+// Physics
+// ============================================================
+function lakeBounce(p, lake) {
+  if (p.x + PET_R < lake.x || p.x - PET_R > lake.x + lake.w) return;
+  if (p.y + PET_R < lake.y || p.y - PET_R > lake.y + lake.h) return;
+  const dL = p.x - lake.x,           dR = lake.x + lake.w - p.x;
+  const dT = p.y - lake.y,           dB = lake.y + lake.h - p.y;
+  const m  = Math.min(dL, dR, dT, dB);
+  if      (m === dL) { p.x = lake.x - PET_R;          p.dx = -Math.abs(p.dx); }
+  else if (m === dR) { p.x = lake.x + lake.w + PET_R; p.dx =  Math.abs(p.dx); }
+  else if (m === dT) { p.y = lake.y - PET_R;          p.dy = -Math.abs(p.dy); }
+  else               { p.y = lake.y + lake.h + PET_R; p.dy =  Math.abs(p.dy); }
+}
+
+function updatePets(dt) {
+  const lake = getLake();
+  for (const p of S.pets) {
+    // Frozen pets (wolf's target) still earn money but don't move
+    if (p.frozen) {
+      p.money      += p.rate * dt;
+      S.totalMoney += p.rate * dt;
+      continue;
+    }
+    p.wanderTimer -= dt;
+    if (p.wanderTimer <= 0) {
+      p.wanderTimer = 2 + Math.random() * 4;
+      const a = Math.random() * Math.PI * 2;
+      p.dx = Math.cos(a) * p.speed;
+      p.dy = Math.sin(a) * p.speed;
+    }
+    p.x += p.dx * dt;
+    p.y += p.dy * dt;
+
+    if (WATER_ANIMALS.has(p.emoji)) {
+      if (p.x < lake.x + PET_R)         { p.x = lake.x + PET_R;         p.dx =  Math.abs(p.dx); }
+      if (p.x > lake.x+lake.w - PET_R)  { p.x = lake.x+lake.w - PET_R;  p.dx = -Math.abs(p.dx); }
+      if (p.y < lake.y + PET_R)         { p.y = lake.y + PET_R;         p.dy =  Math.abs(p.dy); }
+      if (p.y > lake.y+lake.h - PET_R)  { p.y = lake.y+lake.h - PET_R;  p.dy = -Math.abs(p.dy); }
+    } else {
+      if (p.x < PET_R)                 { p.x = PET_R;                 p.dx =  Math.abs(p.dx); }
+      if (p.x > canvas.width  - PET_R) { p.x = canvas.width  - PET_R; p.dx = -Math.abs(p.dx); }
+      if (p.y < PET_R)                 { p.y = PET_R;                 p.dy =  Math.abs(p.dy); }
+      if (p.y > canvas.height - PET_R) { p.y = canvas.height - PET_R; p.dy = -Math.abs(p.dy); }
+      lakeBounce(p, lake);
+    }
+    p.money      += p.rate * dt;
+    S.totalMoney += p.rate * dt;
+  }
+}
+
+// ============================================================
+// Audio engine — reverb bus + continuous ambient
+// ============================================================
+let _ac = null, _verb = null, _verbGain = null, _ambientStarted = false;
+
+function getAudio() {
+  if (S.muted) return null;
+  if (!_ac) {
+    try {
+      _ac = new (window.AudioContext || window.webkitAudioContext)();
+      // Build a shared reverb send/return bus
+      _verbGain = _ac.createGain();
+      _verbGain.gain.value = 0.22;
+      _verbGain.connect(_ac.destination);
+      _verb = _ac.createConvolver();
+      const len = Math.floor(_ac.sampleRate * 1.6);
+      const ibuf = _ac.createBuffer(2, len, _ac.sampleRate);
+      for (let c = 0; c < 2; c++) {
+        const d = ibuf.getChannelData(c);
+        for (let i = 0; i < len; i++) d[i] = (Math.random()*2-1)*Math.pow(1-i/len, 1.6);
+      }
+      _verb.buffer = ibuf;
+      _verb.connect(_verbGain);
+    } catch(e) { return null; }
+  }
+  if (_ac.state === 'suspended') _ac.resume();
+  return _ac;
+}
+
+// Route a gain node to dry + reverb send
+function out(gainNode) {
+  gainNode.connect(_ac.destination);
+  gainNode.connect(_verb);
+}
+
+function noiseBuf(ac, secs) {
+  const n = Math.floor(ac.sampleRate * secs);
+  const b = ac.createBuffer(1, n, ac.sampleRate);
+  const d = b.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = Math.random()*2-1;
+  return b;
+}
+
+// ── Continuous ambient ──────────────────────────────────────
+function startAmbient() {
+  const ac = getAudio();
+  if (!ac || _ambientStarted) return;
+  _ambientStarted = true;
+
+  // 1. Cricket layer — bandpass noise pulsed by LFO
+  const cBuf = noiseBuf(ac, 0.8);
+  const cSrc = ac.createBufferSource(); cSrc.buffer = cBuf; cSrc.loop = true;
+  const cFilt = ac.createBiquadFilter(); cFilt.type='bandpass'; cFilt.frequency.value=3800; cFilt.Q.value=18;
+  const cGain = ac.createGain(); cGain.gain.value = 0.032;
+  const cLFO  = ac.createOscillator(); cLFO.frequency.value = 9;
+  const cMod  = ac.createGain(); cMod.gain.value = 0.022;
+  cLFO.connect(cMod); cMod.connect(cGain.gain);
+  cSrc.connect(cFilt); cFilt.connect(cGain); out(cGain);
+  cSrc.start(); cLFO.start();
+
+  // 2. Second cricket band at slightly different pitch (chorus effect)
+  const c2Buf = noiseBuf(ac, 0.6);
+  const c2Src = ac.createBufferSource(); c2Src.buffer = c2Buf; c2Src.loop = true;
+  const c2F   = ac.createBiquadFilter(); c2F.type='bandpass'; c2F.frequency.value=4100; c2F.Q.value=20;
+  const c2G   = ac.createGain(); c2G.gain.value = 0.020;
+  const c2LFO = ac.createOscillator(); c2LFO.frequency.value = 11.3;
+  const c2Mod = ac.createGain(); c2Mod.gain.value = 0.015;
+  c2LFO.connect(c2Mod); c2Mod.connect(c2G.gain);
+  c2Src.connect(c2F); c2F.connect(c2G); out(c2G);
+  c2Src.start(); c2LFO.start();
+
+  // 3. Wind — low filtered noise with slow volume swell
+  const wBuf  = noiseBuf(ac, 3);
+  const wSrc  = ac.createBufferSource(); wSrc.buffer = wBuf; wSrc.loop = true;
+  const wFilt = ac.createBiquadFilter(); wFilt.type='lowpass'; wFilt.frequency.value=220;
+  const wGain = ac.createGain(); wGain.gain.value = 0.045;
+  const wLFO  = ac.createOscillator(); wLFO.frequency.value = 0.08; // very slow swell
+  const wMod  = ac.createGain(); wMod.gain.value = 0.020;
+  wLFO.connect(wMod); wMod.connect(wGain.gain);
+  wSrc.connect(wFilt); wFilt.connect(wGain); out(wGain);
+  wSrc.start(); wLFO.start();
+
+  // 4. Distant low hum (barn machinery / flies)
+  const hOsc = ac.createOscillator(); hOsc.type='sine'; hOsc.frequency.value=55;
+  const hGain= ac.createGain(); hGain.gain.value=0.012;
+  hOsc.connect(hGain); out(hGain); hOsc.start();
+
+  // Schedule recurring animal calls
+  scheduleAnimal();
+}
+
+function scheduleAnimal() {
+  const delay = (7 + Math.random() * 13) * 1000;
+  setTimeout(() => {
+    if (!S.muted && S.pets.length > 0) {
+      const r = Math.random();
+      if      (r < 0.30) playMoo();
+      else if (r < 0.55) playOink();
+      else if (r < 0.78) playChicken();
+      else                playRooster();
+    }
+    scheduleAnimal();
+  }, delay);
+}
+
+// ── Animal sounds ───────────────────────────────────────────
+function playMoo() {
+  const ac = getAudio(); if (!ac) return;
+  const now = ac.currentTime;
+  // Two oscillators detuned for richness + formant filter
+  const o1 = ac.createOscillator(); o1.type='sawtooth';
+  const o2 = ac.createOscillator(); o2.type='sawtooth';
+  const base = 108;
+  o1.frequency.setValueAtTime(base,       now);
+  o1.frequency.linearRampToValueAtTime(base*1.12, now+0.5);
+  o1.frequency.linearRampToValueAtTime(base*0.90, now+1.9);
+  o2.frequency.setValueAtTime(base*2.02,  now);   // slight detune
+  o2.frequency.linearRampToValueAtTime(base*2.25, now+0.5);
+  o2.frequency.linearRampToValueAtTime(base*1.82, now+1.9);
+
+  // Formant — mouth opening
+  const form = ac.createBiquadFilter(); form.type='bandpass'; form.Q.value=5;
+  form.frequency.setValueAtTime(200, now);
+  form.frequency.linearRampToValueAtTime(390, now+0.35);
+  form.frequency.linearRampToValueAtTime(260, now+1.9);
+
+  // Noise breath
+  const nb  = noiseBuf(ac,0.4); const ns = ac.createBufferSource(); ns.buffer=nb; ns.loop=true;
+  const nf  = ac.createBiquadFilter(); nf.type='bandpass'; nf.frequency.value=800; nf.Q.value=3;
+  const ng  = ac.createGain(); ng.gain.value=0.04;
+  ns.connect(nf); nf.connect(ng);
+
+  const master = ac.createGain();
+  master.gain.setValueAtTime(0, now);
+  master.gain.linearRampToValueAtTime(0.38, now+0.18);
+  master.gain.setValueAtTime(0.38, now+1.55);
+  master.gain.linearRampToValueAtTime(0, now+2.1);
+
+  const g1=ac.createGain(); g1.gain.value=0.65;
+  const g2=ac.createGain(); g2.gain.value=0.35;
+  o1.connect(form); form.connect(g1); g1.connect(master);
+  o2.connect(g2);   g2.connect(master);
+  ng.connect(master);
+  out(master);
+  o1.start(now); o2.start(now); ns.start(now);
+  o1.stop(now+2.2); o2.stop(now+2.2); ns.stop(now+2.2);
+}
+
+function playOink() {
+  const ac = getAudio(); if (!ac) return;
+  const now = ac.currentTime;
+  // Three quick nasal grunt pulses
+  [0, 0.20, 0.42].forEach((dt, i) => {
+    const t   = now + dt;
+    const osc = ac.createOscillator(); osc.type='sawtooth';
+    osc.frequency.setValueAtTime(290+i*15, t);
+    osc.frequency.linearRampToValueAtTime(195-i*10, t+0.17);
+
+    const nasal = ac.createBiquadFilter(); nasal.type='bandpass';
+    nasal.frequency.value = 650+i*80; nasal.Q.value=14;
+
+    // Add noise puff for realism
+    const nb = noiseBuf(ac,0.08); const ns=ac.createBufferSource(); ns.buffer=nb;
+    const nf = ac.createBiquadFilter(); nf.type='bandpass'; nf.frequency.value=1200; nf.Q.value=8;
+    const ng = ac.createGain(); ng.gain.value=0.06;
+    ns.connect(nf); nf.connect(ng);
+
+    const gain = ac.createGain();
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.28, t+0.025);
+    gain.gain.linearRampToValueAtTime(0, t+0.19);
+    osc.connect(nasal); nasal.connect(gain);
+    ng.connect(gain);
+    out(gain);
+    osc.start(t); osc.stop(t+0.22);
+    ns.start(t);  ns.stop(t+0.22);
+  });
+}
+
+function playChicken() {
+  const ac = getAudio(); if (!ac) return;
+  const now = ac.currentTime;
+  // "Bawk bawk bawk bawwwk" — 4 clucks of varying pitch
+  const pattern = [
+    {dt:0,    f:680, dur:0.12},
+    {dt:0.18, f:720, dur:0.11},
+    {dt:0.34, f:660, dur:0.11},
+    {dt:0.52, f:580, dur:0.20},
+  ];
+  pattern.forEach(({dt, f, dur}) => {
+    const t   = now + dt;
+    const osc = ac.createOscillator(); osc.type='square';
+    osc.frequency.setValueAtTime(f,       t);
+    osc.frequency.linearRampToValueAtTime(f*0.68, t+dur);
+
+    const filt = ac.createBiquadFilter(); filt.type='bandpass';
+    filt.frequency.value = f*1.4; filt.Q.value=6;
+
+    // Noise burst (air sac pop)
+    const nb=noiseBuf(ac,0.06); const ns=ac.createBufferSource(); ns.buffer=nb;
+    const nf=ac.createBiquadFilter(); nf.type='highpass'; nf.frequency.value=1800;
+    const ng=ac.createGain(); ng.gain.value=0.18;
+    ns.connect(nf); nf.connect(ng);
+
+    const gain = ac.createGain();
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.22, t+0.015);
+    gain.gain.linearRampToValueAtTime(0, t+dur+0.04);
+    osc.connect(filt); filt.connect(gain);
+    ng.connect(gain);
+    out(gain);
+    osc.start(t); osc.stop(t+dur+0.06);
+    ns.start(t);  ns.stop(t+dur+0.06);
+  });
+}
+
+function playRooster() {
+  const ac = getAudio(); if (!ac) return;
+  const now = ac.currentTime;
+  // Cock-a-doodle-doo — three rising-falling phrases
+  const phrases = [
+    {t:0,    f0:350, f1:620, f2:310, d:0.42},
+    {t:0.48, f0:300, f1:700, f2:360, d:0.52},
+    {t:1.08, f0:280, f1:780, f2:330, d:0.72},
+  ];
+  phrases.forEach(({t: pt, f0, f1, f2, d}) => {
+    const t   = now + pt;
+    const osc = ac.createOscillator(); osc.type='sawtooth';
+    osc.frequency.setValueAtTime(f0, t);
+    osc.frequency.linearRampToValueAtTime(f1, t + d*0.45);
+    osc.frequency.linearRampToValueAtTime(f2, t + d);
+
+    const vib = ac.createOscillator(); vib.frequency.value=18;
+    const vibG= ac.createGain(); vibG.gain.value=8;
+    vib.connect(vibG); vibG.connect(osc.frequency);
+
+    const filt = ac.createBiquadFilter(); filt.type='bandpass';
+    filt.frequency.value=900; filt.Q.value=4;
+
+    const gain = ac.createGain();
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.24, t+0.04);
+    gain.gain.setValueAtTime(0.24, t+d*0.75);
+    gain.gain.linearRampToValueAtTime(0, t+d+0.06);
+
+    osc.connect(filt); filt.connect(gain);
+    out(gain);
+    vib.start(t); osc.start(t);
+    vib.stop(t+d+0.1); osc.stop(t+d+0.1);
+  });
+}
+
+// ── Predator sounds ─────────────────────────────────────────
+function playWolfHowl() {
+  const ac = getAudio(); if (!ac) return;
+  const now = ac.currentTime;
+  const osc  = ac.createOscillator(); osc.type='sawtooth';
+  const lfo  = ac.createOscillator(); lfo.frequency.value=5.5;
+  const lfoG = ac.createGain(); lfoG.gain.value=14;
+  lfo.connect(lfoG); lfoG.connect(osc.frequency);
+  osc.frequency.setValueAtTime(195, now);
+  osc.frequency.linearRampToValueAtTime(550, now+0.7);
+  osc.frequency.setValueAtTime(550, now+0.7);
+  osc.frequency.linearRampToValueAtTime(500, now+2.3);
+  osc.frequency.linearRampToValueAtTime(205, now+4.0);
+  const gain = ac.createGain();
+  gain.gain.setValueAtTime(0, now);
+  gain.gain.linearRampToValueAtTime(0.30, now+0.18);
+  gain.gain.setValueAtTime(0.30, now+3.1);
+  gain.gain.linearRampToValueAtTime(0, now+4.3);
+  osc.connect(gain); out(gain);
+  lfo.start(now); osc.start(now);
+  lfo.stop(now+4.3); osc.stop(now+4.3);
+}
+
+function playSharkTheme() {
+  const ac = getAudio(); if (!ac) return;
+  const now = ac.currentTime;
+  const freqs=[82.4,87.3];
+  const gaps=[0.52,0.48,0.42,0.36,0.30,0.26,0.22,0.19,0.17,0.15,0.13,0.11];
+  let t = now;
+  gaps.forEach((g, i) => {
+    const osc=ac.createOscillator(); osc.type='sine'; osc.frequency.value=freqs[i%2];
+    const gain=ac.createGain();
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.44, t+0.02);
+    gain.gain.setValueAtTime(0.44, t+g*0.72);
+    gain.gain.linearRampToValueAtTime(0, t+g);
+    osc.connect(gain); out(gain);
+    osc.start(t); osc.stop(t+g+0.02);
+    t += g;
+  });
+}
+
+// ============================================================
+// Predator system — wolf only
+// ============================================================
+function resetPredatorTimer() {
+  S.predatorTimer = rand(30, 120);   // 30 seconds – 2 minutes
+}
+
+function triggerPredator() {
+  if (S.pets.length === 0 || S.wolfAnim.active || S.sharkAnim.active) { resetPredatorTimer(); return; }
+
+  // Shark only valid if there are land animals near the lake
+  const landPets = S.pets.filter(p => !WATER_ANIMALS.has(p.emoji));
+  const canShark = landPets.length > 0;
+  S.predatorType = (canShark && Math.random() < 0.45) ? 'shark' : 'wolf';
+
+  S.predatorActive   = true;
+  S.predatorTimeLeft = 7;
+  S.predatorQ        = generateQuestion();
+  if (S.predatorType === 'shark') playSharkTheme(); else playWolfHowl();
+  setTimeout(openPredatorModal, 350);
+}
+
+function openPredatorModal() {
+  const isShark = S.predatorType === 'shark';
+  document.getElementById('pred-icon').textContent     = isShark ? '🦈' : '🐺';
+  document.getElementById('pred-header').textContent   = isShark ? 'DANGER! A Shark is Lurking!' : 'DANGER! A Wolf is Attacking!';
+  document.getElementById('pred-subtitle').textContent = isShark ? 'Answer in time to drive it back!' : 'Answer in time to scare it off!';
+  document.getElementById('pred-question').textContent = S.predatorQ.text;
+  document.getElementById('pred-feedback').className   = 'feedback';
+  document.getElementById('pred-feedback').textContent = '';
+  document.getElementById('pred-answer').value = '';
+  document.getElementById('pred-bar').style.width = '100%';
+  document.getElementById('pred-num').textContent = '7';
+  document.getElementById('predator-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('pred-answer').focus(), 50);
+}
+
+function updatePredatorDisplay() {
+  const pct = Math.max(0, S.predatorTimeLeft / 7 * 100);
+  document.getElementById('pred-bar').style.width  = pct + '%';
+  document.getElementById('pred-num').textContent  = Math.ceil(S.predatorTimeLeft);
+  document.getElementById('pred-num').style.color  = S.predatorTimeLeft < 3 ? '#ff3355' : '#e94560';
+}
+
+function submitPredatorAnswer() {
+  const raw = document.getElementById('pred-answer').value.trim();
+  const val = parseInt(raw, 10);
+  if (isNaN(val) || raw === '') return;
+
+  if (val === S.predatorQ.answer) {
+    document.getElementById('pred-feedback').className   = 'feedback correct';
+    document.getElementById('pred-feedback').textContent = '✓ Correct! Wolf runs away!';
+    document.getElementById('pred-submit').disabled = true;
+    setTimeout(closePredatorSafe, 800);
+  } else {
+    document.getElementById('pred-feedback').className   = 'feedback wrong';
+    document.getElementById('pred-feedback').textContent = `✗ Wrong! The answer was ${S.predatorQ.answer}.`;
+    document.getElementById('pred-submit').disabled = true;
+    setTimeout(launchWolfAttack, 800);
+  }
+}
+
+function closePredatorSafe() {
+  document.getElementById('predator-modal').style.display = 'none';
+  document.getElementById('pred-submit').disabled = false;
+  S.predatorActive = false;
+  resetPredatorTimer();
+}
+
+function launchWolfAttack() {
+  document.getElementById('predator-modal').style.display = 'none';
+  document.getElementById('pred-submit').disabled = false;
+  S.predatorActive = false;
+  if (S.predatorType === 'shark') startSharkAttack(); else startWolfRun();
+}
+
+function startWolfRun() {
+  if (S.pets.length === 0) { resetPredatorTimer(); return; }
+  const victim = S.pets[Math.floor(Math.random() * S.pets.length)];
+  victim.frozen = true;
+  const wa = S.wolfAnim;
+  wa.active    = true;
+  wa.x         = -90;
+  wa.y         = victim.y;
+  wa.tx        = victim.x;
+  wa.ty        = victim.y;
+  wa.phase     = 'run-in';
+  wa.grabTimer = 0.40;
+  wa.victim    = victim;
+}
+
+function updateWolf(dt) {
+  const wa = S.wolfAnim;
+  if (!wa.active) return;
+  const SPEED = 430;
+
+  if (wa.phase === 'run-in') {
+    wa.x += SPEED * dt;
+    if (wa.x >= wa.tx - 55) {
+      wa.x     = wa.tx - 55;
+      wa.phase = 'grab';
+    }
+  } else if (wa.phase === 'grab') {
+    wa.grabTimer -= dt;
+    if (wa.grabTimer <= 0) {
+      wa.phase = 'run-out';
+    }
+  } else {  // 'run-out' — wolf drags victim back LEFT
+    wa.x -= SPEED * dt;
+    if (wa.victim) wa.victim.x = wa.x + 55;   // victim dragged with wolf
+    if (wa.x < -160) {
+      S.pets    = S.pets.filter(p => p !== wa.victim);
+      wa.victim = null;
+      wa.active = false;
+      resetPredatorTimer();
+      if (S.pets.length === 0) triggerGameOver();
+    }
+  }
+}
+
+function drawWolf() {
+  const wa = S.wolfAnim;
+  if (!wa.active) return;
+  const bob    = wa.phase !== 'grab' ? Math.sin(Date.now() * 0.018) * 10 : 0;
+  const shake  = wa.phase === 'grab' ? (Math.random() - 0.5) * 6 : 0;
+
+  ctx.save();
+  ctx.font         = '54px serif';
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+
+  if (wa.phase === 'run-out') {
+    // Wolf faces left, dragging victim on its right
+    ctx.fillText('🐺', wa.x + shake, wa.y + bob);
+    if (wa.victim) {
+      ctx.font = '42px serif';
+      ctx.fillText(wa.victim.emoji, wa.x + 70, wa.y + bob + 8);
+    }
+  } else if (wa.phase === 'grab') {
+    // Wolf faces right chomping, victim shakes
+    ctx.save();
+    ctx.translate(wa.x + shake, wa.y + shake);
+    ctx.scale(-1, 1);
+    ctx.fillText('🐺', 0, 0);
+    ctx.restore();
+    if (wa.victim) {
+      ctx.font = '42px serif';
+      ctx.fillText(wa.victim.emoji, wa.tx + (Math.random()-0.5)*8, wa.ty + (Math.random()-0.5)*8);
+    }
+  } else {
+    // run-in: wolf faces right moving toward victim
+    ctx.save();
+    ctx.translate(wa.x, wa.y + bob);
+    ctx.scale(-1, 1);
+    ctx.fillText('🐺', 0, 0);
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+// ============================================================
+// Shark attack
+// ============================================================
+function startSharkAttack() {
+  const landPets = S.pets.filter(p => !WATER_ANIMALS.has(p.emoji));
+  if (landPets.length === 0) { resetPredatorTimer(); return; }
+
+  const lake   = getLake();
+  // Pick victim closest to lake edge
+  let victim   = landPets[0];
+  let bestDist = Infinity;
+  for (const p of landPets) {
+    const dx = Math.max(0, lake.x - p.x, p.x - (lake.x + lake.w));
+    const dy = Math.max(0, lake.y - p.y, p.y - (lake.y + lake.h));
+    const d  = Math.sqrt(dx*dx + dy*dy);
+    if (d < bestDist) { bestDist = d; victim = p; }
+  }
+  victim.frozen = true;
+
+  // Clamp entry point to the lake edge closest to victim
+  const edgeX = Math.min(Math.max(victim.x, lake.x + 20), lake.x + lake.w - 20);
+  const edgeY = Math.min(Math.max(victim.y, lake.y + 20), lake.y + lake.h - 20);
+  // Push edge point to nearest wall
+  const distL = edgeX - lake.x, distR = (lake.x + lake.w) - edgeX;
+  const distT = edgeY - lake.y, distB = (lake.y + lake.h) - edgeY;
+  const minD  = Math.min(distL, distR, distT, distB);
+  let ex = edgeX, ey = edgeY;
+  if (minD === distL) ex = lake.x;
+  else if (minD === distR) ex = lake.x + lake.w;
+  else if (minD === distT) ey = lake.y;
+  else ey = lake.y + lake.h;
+
+  const sa   = S.sharkAnim;
+  sa.active  = true;
+  sa.finX    = lake.x + lake.w * 0.5;
+  sa.finY    = lake.y + lake.h * 0.5;
+  sa.edgeX   = ex;
+  sa.edgeY   = ey;
+  sa.victim  = victim;
+  sa.phase   = 'swim-in';
+  sa.phaseT  = 0;
+  sa.phaseDur= 1.4;
+  sa.startX  = sa.finX;
+  sa.startY  = sa.finY;
+}
+
+function updateShark(dt) {
+  const sa = S.sharkAnim;
+  if (!sa.active) return;
+  sa.phaseT += dt;
+  const frac = Math.min(sa.phaseT / sa.phaseDur, 1);
+
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function easeIn(t) { return t * t; }
+  function easeOut(t) { return 1 - (1-t)*(1-t); }
+
+  if (sa.phase === 'swim-in') {
+    sa.finX = lerp(sa.startX, sa.edgeX, easeIn(frac));
+    sa.finY = lerp(sa.startY, sa.edgeY, easeIn(frac));
+    if (frac >= 1) {
+      sa.phase   = 'lunge';
+      sa.phaseT  = 0;
+      sa.phaseDur= 0.38;
+      sa.startX  = sa.edgeX;
+      sa.startY  = sa.edgeY;
+    }
+  } else if (sa.phase === 'lunge') {
+    sa.finX = lerp(sa.startX, sa.victim.x, easeOut(frac));
+    sa.finY = lerp(sa.startY, sa.victim.y, easeOut(frac));
+    if (sa.victim) { sa.victim.x = sa.finX; sa.victim.y = sa.finY; }
+    if (frac >= 1) {
+      sa.phase   = 'drag';
+      sa.phaseT  = 0;
+      sa.phaseDur= 0.75;
+      sa.startX  = sa.finX;
+      sa.startY  = sa.finY;
+    }
+  } else if (sa.phase === 'drag') {
+    sa.finX = lerp(sa.startX, sa.edgeX, frac);
+    sa.finY = lerp(sa.startY, sa.edgeY, frac);
+    if (sa.victim) { sa.victim.x = sa.finX; sa.victim.y = sa.finY; }
+    if (frac >= 1) {
+      sa.phase   = 'sink';
+      sa.phaseT  = 0;
+      sa.phaseDur= 0.55;
+    }
+  } else if (sa.phase === 'sink') {
+    if (frac >= 1) {
+      S.pets    = S.pets.filter(p => p !== sa.victim);
+      sa.victim = null;
+      sa.active = false;
+      resetPredatorTimer();
+      if (S.pets.length === 0) triggerGameOver();
+    }
+  }
+}
+
+function drawShark() {
+  const sa = S.sharkAnim;
+  if (!sa.active) return;
+  const lake = getLake();
+
+  ctx.save();
+  ctx.font         = '48px serif';
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+
+  if (sa.phase === 'swim-in') {
+    // Only fin visible in water — scale down to suggest just tip
+    ctx.globalAlpha = 0.9;
+    ctx.font = '32px serif';
+    ctx.fillText('🦈', sa.finX, sa.finY);
+
+    // Ripple ring around fin
+    const r = 18 + Math.sin(Date.now() * 0.01) * 4;
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth   = 2;
+    ctx.beginPath(); ctx.arc(sa.finX, sa.finY, r, 0, Math.PI * 2); ctx.stroke();
+
+  } else if (sa.phase === 'lunge' || sa.phase === 'drag') {
+    // Full shark visible lunging onto land — draw shark rotated toward victim
+    const angle = Math.atan2(sa.finY - sa.edgeY, sa.finX - sa.edgeX);
+    ctx.save();
+    ctx.translate(sa.finX, sa.finY);
+    ctx.rotate(angle);
+    ctx.scale(-1, 1);
+    ctx.font = '48px serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('🦈', 0, 0);
+    ctx.restore();
+
+    // Victim being dragged — shake during lunge, fade slightly during drag
+    if (sa.victim) {
+      const shake = sa.phase === 'lunge' ? (Math.random()-0.5)*10 : 0;
+      ctx.save();
+      ctx.font = '36px serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.globalAlpha = sa.phase === 'drag' ? 1 - (sa.phaseT / sa.phaseDur) * 0.5 : 1;
+      ctx.fillText(sa.victim.emoji, sa.victim.x + shake, sa.victim.y + shake - 22);
+      ctx.restore();
+    }
+
+  } else if (sa.phase === 'sink') {
+    // Shark + victim fade into water
+    const alpha = 1 - sa.phaseT / sa.phaseDur;
+    ctx.globalAlpha = alpha;
+    ctx.fillText('🦈', sa.edgeX, sa.edgeY);
+    if (sa.victim) {
+      ctx.font = '36px serif';
+      ctx.fillText(sa.victim.emoji, sa.edgeX, sa.edgeY - 28);
+    }
+    // Splash rings
+    const rs = 20 + (sa.phaseT / sa.phaseDur) * 40;
+    ctx.globalAlpha = alpha * 0.5;
+    ctx.strokeStyle = 'rgba(170,230,255,0.8)';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(sa.edgeX, sa.edgeY, rs, 0, Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(sa.edgeX, sa.edgeY, rs * 0.6, 0, Math.PI*2); ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function updatePredator(dt) {
+  if (S.predatorActive) {
+    S.predatorTimeLeft -= dt;
+    updatePredatorDisplay();
+    if (S.predatorTimeLeft <= 0) launchWolfAttack();
+  } else if (!S.wolfAnim.active && !S.sharkAnim.active) {
+    S.predatorTimer -= dt;
+    if (S.predatorTimer <= 0) triggerPredator();
+  }
+}
+
+function triggerGameOver() {
+  S.phase = 'gameover';
+  showResult('💀', 'Game Over!',
+    'All your animals were taken by predators! The farm is empty. Try again!',
+    () => location.reload()
+  );
+}
+
+function triggerWin() {
+  S.phase = 'gameover';
+  showResult('🏆', 'YOU WIN!',
+    'Amazing! You acquired 25 pets! Your farm is legendary! 🎉',
+    () => location.reload()
+  );
+}
+
+// ============================================================
+// Farm rendering
+// ============================================================
+function rrPath(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.arcTo(x+w, y,   x+w, y+h, r);
+  ctx.arcTo(x+w, y+h, x,   y+h, r);
+  ctx.arcTo(x,   y+h, x,   y,   r);
+  ctx.arcTo(x,   y,   x+w, y,   r);
+  ctx.closePath();
+}
+
+function drawTree(x, y) {
+  ctx.fillStyle = '#6b4218'; ctx.fillRect(x-5, y, 10, 28);
+  ctx.fillStyle = '#4e2e10'; ctx.fillRect(x+1, y, 4,  28);
+  ctx.fillStyle = 'rgba(0,0,0,0.12)';
+  ctx.beginPath(); ctx.ellipse(x, y+26, 14, 4, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#265a24';
+  ctx.beginPath(); ctx.arc(x,    y-6,  27, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#307830';
+  ctx.beginPath(); ctx.arc(x-9,  y-18, 19, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x+9,  y-18, 19, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#3a9838';
+  ctx.beginPath(); ctx.arc(x,    y-30, 15, 0, Math.PI*2); ctx.fill();
+}
+
+function drawFence(x, y, w, h) {
+  const RAIL='#c89040', POST='#7a4e18', RT=5, PW=11, PD=26, SP=58;
+  ctx.fillStyle = RAIL;
+  ctx.fillRect(x,       y+6,     w,  RT);  // top r1
+  ctx.fillRect(x,       y+17,    w,  RT);  // top r2
+  ctx.fillRect(x,       y+h-11,  w,  RT);  // bot r1
+  ctx.fillRect(x,       y+h-22,  w,  RT);  // bot r2
+  ctx.fillRect(x+6,    y, RT, h);          // left r1
+  ctx.fillRect(x+17,   y, RT, h);          // left r2
+  ctx.fillRect(x+w-11, y, RT, h);          // right r1
+  ctx.fillRect(x+w-22, y, RT, h);          // right r2
+  ctx.fillStyle = POST;
+  for (let px=x; px<=x+w; px+=SP) {
+    ctx.fillRect(px-PW/2, y-5,      PW, PD);
+    ctx.fillRect(px-PW/2, y+h-PD+5, PW, PD);
+  }
+  for (let py=y+SP; py<y+h; py+=SP) {
+    ctx.fillRect(x-5,      py-PW/2, PD, PW);
+    ctx.fillRect(x+w-PD+5, py-PW/2, PD, PW);
+  }
+}
+
+function drawFarm(t) {
+  const lake = getLake();
+
+  // Grass base
+  const gg = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+  gg.addColorStop(0,   '#5baa64');
+  gg.addColorStop(0.5, '#4d9855');
+  gg.addColorStop(1,   '#428a4a');
+  ctx.fillStyle = gg;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Grass texture patches
+  if (farmEl) {
+    for (const g of farmEl.grass) {
+      ctx.save();
+      ctx.translate(g.x, g.y); ctx.rotate(g.a);
+      ctx.globalAlpha = g.alpha;
+      ctx.fillStyle = g.dark ? '#3a7a3a' : '#74c274';
+      ctx.beginPath(); ctx.ellipse(0,0,g.rx,g.ry,0,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // Lake (clipped to rounded shape)
+  ctx.save();
+  rrPath(lake.x, lake.y, lake.w, lake.h, lake.r);
+  ctx.clip();
+
+  const wg = ctx.createLinearGradient(lake.x, lake.y, lake.x+lake.w, lake.y+lake.h);
+  wg.addColorStop(0,   '#3a9ed4');
+  wg.addColorStop(0.4, '#2278b4');
+  wg.addColorStop(1,   '#175090');
+  ctx.fillStyle = wg;
+  ctx.fillRect(lake.x, lake.y, lake.w, lake.h);
+
+  // Animated ripples
+  ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+  ctx.lineWidth   = 1.8;
+  for (let i = 0; i < 7; i++) {
+    const wy = lake.y + (lake.h/8)*(i+0.5);
+    const ph = (t*0.65 + i*1.15) % (Math.PI*2);
+    ctx.beginPath();
+    for (let wx = lake.x+12; wx < lake.x+lake.w-12; wx += 3) {
+      const yo = Math.sin((wx-lake.x)*0.042+ph)*3.5;
+      wx === lake.x+12 ? ctx.moveTo(wx,wy+yo) : ctx.lineTo(wx,wy+yo);
+    }
+    ctx.stroke();
+  }
+
+  // Lily pads
+  if (farmEl) {
+    for (const lp of farmEl.lily) {
+      ctx.fillStyle = '#267030';
+      ctx.beginPath(); ctx.arc(lp.x, lp.y, lp.r, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#1e5824';
+      ctx.beginPath(); ctx.arc(lp.x, lp.y, lp.r*0.6, 0.3, Math.PI*1.9); ctx.fill();
+    }
+  }
+  ctx.restore();
+
+  // Shore shimmer
+  ctx.strokeStyle = 'rgba(170,230,255,0.45)';
+  ctx.lineWidth = 3;
+  rrPath(lake.x, lake.y, lake.w, lake.h, lake.r);
+  ctx.stroke();
+
+  // Trees (behind fences)
+  if (farmEl) for (const tr of farmEl.trees) drawTree(tr.x, tr.y);
+
+  // Perimeter fence
+  drawFence(10, 10, canvas.width-20, canvas.height-20);
+  // Lake fence
+  drawFence(lake.x-20, lake.y-20, lake.w+40, lake.h+40);
+
+  // Flowers (on top of grass, behind pets)
+  if (farmEl) {
+    ctx.font='15px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    for (const f of farmEl.flowers) ctx.fillText(f.e, f.x, f.y);
+  }
+}
+
+function drawPets() {
+  const wa = S.wolfAnim;
+  const sa = S.sharkAnim;
+  for (const p of S.pets) {
+    // Skip victim when predator is controlling its rendering
+    if (wa.active && (wa.phase === 'grab' || wa.phase === 'run-out') && p === wa.victim) continue;
+    if (sa.active && (sa.phase === 'lunge' || sa.phase === 'drag' || sa.phase === 'sink') && p === sa.victim) continue;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.14)';
+    ctx.beginPath(); ctx.ellipse(p.x, p.y+22, 18, 6, 0, 0, Math.PI*2); ctx.fill();
+
+    ctx.font='42px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(p.emoji, p.x, p.y);
+
+    const label=`$${p.money.toFixed(2)}`, cW=96, cH=26;
+    const cX=p.x-cW/2, cY=p.y-42-cH-2;
+    ctx.fillStyle='rgba(10,20,40,0.84)';
+    rrPath(cX,cY,cW,cH,6); ctx.fill();
+    ctx.strokeStyle='#4ecca3'; ctx.lineWidth=1.5;
+    rrPath(cX,cY,cW,cH,6); ctx.stroke();
+    ctx.fillStyle='#4ecca3';
+    ctx.font='bold 14px "Comic Sans MS",cursive';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(label, p.x, cY+cH/2);
+  }
+
+}
+
+function drawScene(t) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawFarm(t);
+  drawPets();
+  drawShark();
+  drawWolf();
+}
+
+// ============================================================
+// HUD
+// ============================================================
+function updateHUD() {
+  document.getElementById('money-display').textContent =
+    `💰 $${S.totalMoney.toFixed(2)}`;
+
+  const countEl = document.getElementById('pet-count-display');
+  countEl.textContent = S.pets.length === 0 ? '' :
+    `${S.pets.length} pet${S.pets.length !== 1 ? 's' : ''}`;
+
+  const buyBtn = document.getElementById('buy-btn');
+  if (S.phase === 'playing') {
+    buyBtn.style.display = 'block';
+    buyBtn.disabled = S.totalMoney < S.petCost;
+    document.getElementById('pet-cost-label').textContent =
+      `($${S.petCost % 1 === 0 ? S.petCost.toFixed(0) : S.petCost.toFixed(2)})`;
+  } else {
+    buyBtn.style.display = 'none';
+  }
+}
+
+// ============================================================
+// Quiz flow
+// ============================================================
+function showQuiz(isBuy) {
+  S.isBuyQuiz         = isBuy;
+  S.questionsCorrect  = 0;
+  S.phase             = isBuy ? 'buyQuiz' : 'quiz';
+
+  document.getElementById('quiz-title').textContent = isBuy
+    ? 'Answer 2 Questions to Buy Your Pet!'
+    : 'Answer 2 Questions to Get Your First Pet!';
+  document.getElementById('quiz-subtitle').textContent = isBuy
+    ? 'Get both right or you lose your money!'
+    : 'Get them both right and pick your first animal!';
+
+  resetDots();
+  clearFeedback();
+  loadNextQuestion();
+  document.getElementById('quiz-modal').style.display = 'flex';
+  document.getElementById('answer-input').focus();
+}
+
+function loadNextQuestion() {
+  S.currentQ = generateQuestion();
+  document.getElementById('question-text').textContent = S.currentQ.text;
+  document.getElementById('answer-input').value = '';
+  clearFeedback();
+  setTimeout(() => document.getElementById('answer-input').focus(), 50);
+}
+
+function submitAnswer() {
+  const raw = document.getElementById('answer-input').value.trim();
+  const val = parseInt(raw, 10);
+  if (isNaN(val) || raw === '') return;
+
+  if (val === S.currentQ.answer) {
+    S.questionsCorrect++;
+    setFeedback('correct', '✓ Correct!');
+    fillDot(S.questionsCorrect);
+
+    if (S.questionsCorrect >= 2) {
+      setTimeout(() => {
+        document.getElementById('quiz-modal').style.display = 'none';
+        showPetSelect();
+      }, 650);
+    } else {
+      setTimeout(loadNextQuestion, 650);
+    }
+  } else {
+    setFeedback('wrong', `✗ Not quite! The answer was ${S.currentQ.answer}.`);
+
+    if (S.isBuyQuiz) {
+      // Money already deducted — show failure
+      setTimeout(() => {
+        document.getElementById('quiz-modal').style.display = 'none';
+        showResult('😢', 'Wrong Answer!',
+          `You lost $${S.amountSpent.toFixed(2)}. Better luck next time! Keep earning!`,
+          () => { S.phase = 'playing'; }
+        );
+      }, 1000);
+    } else {
+      // First quiz — let them try again (no penalty)
+      setTimeout(loadNextQuestion, 1000);
+    }
+  }
+}
+
+// ── Quiz helpers ──
+function resetDots() {
+  document.getElementById('dot-1').className = 'dot';
+  document.getElementById('dot-2').className = 'dot';
+}
+function fillDot(n) {
+  if (n >= 1) document.getElementById('dot-1').className = 'dot filled';
+  if (n >= 2) document.getElementById('dot-2').className = 'dot filled';
+}
+function clearFeedback() {
+  const el = document.getElementById('feedback');
+  el.className = 'feedback';
+  el.textContent = '';
+}
+function setFeedback(type, msg) {
+  const el = document.getElementById('feedback');
+  el.className = `feedback ${type}`;
+  el.textContent = msg;
+}
+
+// ============================================================
+// Pet selection
+// ============================================================
+function showPetSelect() {
+  S.pendingOptions = randomPetOptions();
+  const container  = document.getElementById('pet-options');
+  container.innerHTML = '';
+
+  for (const emoji of S.pendingOptions) {
+    const btn = document.createElement('div');
+    btn.className   = 'pet-option';
+    btn.textContent = emoji;
+    btn.title       = 'Click to pick this pet!';
+    btn.addEventListener('click', () => selectPet(emoji));
+    container.appendChild(btn);
+  }
+
+  document.getElementById('pet-modal').style.display = 'flex';
+}
+
+function selectPet(emoji) {
+  document.getElementById('pet-modal').style.display = 'none';
+  const pet = createPet(emoji);
+  S.pets.push(pet);
+  S.petCost *= 2;
+  S.totalPetsAcquired++;
+
+  const r = petRarity(pet.rate);
+  document.getElementById('pr-emoji').textContent = emoji;
+  const badge = document.getElementById('pr-rarity');
+  badge.textContent      = r.label;
+  badge.style.background = r.bg;
+  badge.style.color      = r.color;
+  document.getElementById('pr-rate').textContent = `$${pet.rate.toFixed(2)} / sec`;
+  document.getElementById('pet-reveal-modal').style.display = 'flex';
+
+  document.getElementById('pr-ok-btn').onclick = () => {
+    document.getElementById('pet-reveal-modal').style.display = 'none';
+    S.phase = 'playing';
+    if (S.totalPetsAcquired >= 25) setTimeout(triggerWin, 300);
+  };
+}
+
+// ============================================================
+// Result modal
+// ============================================================
+function showResult(icon, title, msg, onOk) {
+  document.getElementById('result-icon').textContent  = icon;
+  document.getElementById('result-title').textContent = title;
+  document.getElementById('result-msg').textContent   = msg;
+  document.getElementById('result-modal').style.display = 'flex';
+  document.getElementById('result-ok-btn').onclick = () => {
+    document.getElementById('result-modal').style.display = 'none';
+    onOk();
+  };
+}
+
+// ============================================================
+// Pet info modal
+// ============================================================
+function petAtPoint(cx, cy) {
+  for (let i = S.pets.length - 1; i >= 0; i--) {
+    const p = S.pets[i];
+    const dx = cx - p.x, dy = cy - p.y;
+    if (Math.sqrt(dx*dx + dy*dy) <= PET_HIT_RADIUS) return p;
+  }
+  return null;
+}
+
+function showPetInfo(pet) {
+  const r = petRarity(pet.rate);
+  document.getElementById('pi-emoji').textContent = pet.emoji;
+  const badge = document.getElementById('pi-rarity');
+  badge.textContent = r.label;
+  badge.style.background = r.bg;
+  badge.style.color       = r.color;
+  document.getElementById('pi-rate').textContent  = `$${pet.rate.toFixed(2)} / sec`;
+  document.getElementById('pi-total').textContent = `$${pet.money.toFixed(2)}`;
+  document.getElementById('pet-info-modal').style.display = 'flex';
+}
+
+canvas.addEventListener('click', e => {
+  if (S.phase !== 'playing') return;
+  const rect = canvas.getBoundingClientRect();
+  const pet  = petAtPoint(e.clientX - rect.left, e.clientY - rect.top);
+  if (pet) showPetInfo(pet);
+});
+
+canvas.addEventListener('mousemove', e => {
+  if (S.phase !== 'playing') { canvas.style.cursor = 'default'; return; }
+  const rect = canvas.getBoundingClientRect();
+  canvas.style.cursor = petAtPoint(e.clientX-rect.left, e.clientY-rect.top) ? 'pointer' : 'default';
+});
+
+// Close pet info modal by clicking the overlay background
+document.getElementById('pet-info-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('pet-info-modal')) {
+    document.getElementById('pet-info-modal').style.display = 'none';
+  }
+});
+
+// ============================================================
+// Buy button
+// ============================================================
+document.getElementById('buy-btn').addEventListener('click', () => {
+  if (S.phase !== 'playing' || S.totalMoney < S.petCost) return;
+  S.amountSpent  = S.petCost;
+  S.totalMoney  -= S.petCost;
+  showQuiz(true);
+});
+
+// ============================================================
+// Quiz input events
+// ============================================================
+document.getElementById('submit-btn').addEventListener('click', submitAnswer);
+document.getElementById('answer-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') submitAnswer();
+});
+
+document.getElementById('pred-submit').addEventListener('click', submitPredatorAnswer);
+document.getElementById('pred-answer').addEventListener('keydown', e => {
+  if (e.key === 'Enter') submitPredatorAnswer();
+});
+
+document.getElementById('mute-btn').addEventListener('click', () => {
+  S.muted = !S.muted;
+  document.getElementById('mute-btn').textContent = S.muted ? '🔇' : '🔊';
+  if (_ac) S.muted ? _ac.suspend() : _ac.resume();
+});
+
+// Start ambient on first user gesture (browser requires this)
+document.addEventListener('click', () => startAmbient(), { once: true });
+
+// ============================================================
+// Main game loop
+// ============================================================
+function gameLoop(ts) {
+  if (S.lastTs === null) S.lastTs = ts;
+  const dt = Math.min((ts - S.lastTs) / 1000, 0.1);
+  S.lastTs = ts;
+
+  const t = ts / 1000;
+  if (S.phase === 'playing' || S.phase === 'buyQuiz') {
+    updatePets(dt);
+    updateWolf(dt);
+    updateShark(dt);
+    updateHUD();
+    if (S.phase === 'playing') updatePredator(dt);
+  }
+  drawScene(t);
+
+  requestAnimationFrame(gameLoop);
+}
+
+// ============================================================
+// Boot
+// ============================================================
+S.predatorTimer = rand(30, 120);
+showQuiz(false);
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
